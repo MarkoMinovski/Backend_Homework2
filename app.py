@@ -62,7 +62,7 @@ def get_data_for_ticker(ticker_id: str):
 
     if ticker_info_doc["last_date_info"] < LATEST_AVAILABLE_DATE:
         while True:
-            res = ws.main_scraping_loop()
+            res = ws.scrape_for_single_ticker(ticker_id)
             if res == "OK":
                 break
 

@@ -160,14 +160,15 @@ class web_scraper:
         last_state_before_scraping = db["tickers"].find_one({"ticker": ticker_code})
         date = last_state_before_scraping["last_date_info"]
 
-        while date < latest_available_date:
+        while date.date() < latest_available_date.date():
             Tablescraper.scrape_table(ticker_code, date + timedelta(days=1), False, None, None)
 
             # Find new latest after scrape
-            date = db[ticker_code].find().sort("date", -1).limit(1)
+            latest_state_after_scrape = db[ticker_code].find().sort("date", -1)[0]
+            date = latest_state_after_scrape["date"]
 
             db["tickers"].update_one(
-                {"ticker:", ticker_code},
+                {"ticker": ticker_code},
                 {"$set": {"last_date_info": date}}
             )
 
