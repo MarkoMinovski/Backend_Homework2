@@ -152,7 +152,7 @@ class web_scraper:
 
         return "OK"
 
-    # Assume ticker_code is always an existing ticker for now
+    # Assume ticker_code is always an existing ticker
     @staticmethod
     def scrape_for_single_ticker(ticker_code):
         latest_available_date = Latestdatescraper.get_latest_available_date()

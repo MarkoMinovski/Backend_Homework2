@@ -42,7 +42,6 @@ def get_day_month_year(date: str):
     return day_m_year_list
 
 
-# Abstract class. Methods only, no fields needed
 class Tablescraper:
     @staticmethod
     def scrape_table(ticker_code: str, latest_date, write_locally, file, writer):
@@ -81,12 +80,9 @@ class Tablescraper:
             table_ticker_collection = db[ticker_code]
             all_rows_to_be_written_list = []
 
-            # HTML structure of stock exchange page:
-            # each <tr> has exactly 9 child <td> tags
             for row in table_rows:
                 children = row.find_all("td", recursive=False)
 
-                # issue with reading first row of the table as it has no <td> tags
                 if len(children) != 9:
                     continue
 
@@ -181,4 +177,3 @@ class Tablescraper:
             return server_resp
         else:
             return None
-

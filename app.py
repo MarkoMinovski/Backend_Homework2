@@ -10,7 +10,6 @@ LATEST_AVAILABLE_DATE = lds.get_latest_available_date()
 app = Flask(__name__)
 
 
-# This is hard coded to only work for the "tickers" collection in our MongoDB database
 def convert_BSON_to_JSON_doc(BSON_obj):
     return {
         "ticker": BSON_obj["ticker"],
