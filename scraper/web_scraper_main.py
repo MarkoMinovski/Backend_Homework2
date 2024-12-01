@@ -9,6 +9,8 @@ from scraper.latest_date_scraper_web import Latestdatescraper
 import time
 
 TEN_YEARS_PRIOR = datetime.today() - timedelta(days=(365 * 10) - 1)
+
+
 # START = time.time()
 # END = None
 
@@ -147,5 +149,26 @@ class web_scraper:
 
         if local_write:
             file.close()
+
+        return "OK"
+
+    # Assume ticker_code is always an existing ticker for now
+    @staticmethod
+    def scrape_for_single_ticker(ticker_code):
+        latest_available_date = Latestdatescraper.get_latest_available_date()
+
+        last_state_before_scraping = db["tickers"].find_one({"ticker": ticker_code})
+        date = last_state_before_scraping["last_date_info"]
+
+        while date < latest_available_date:
+            Tablescraper.scrape_table(ticker_code, date + timedelta(days=1), False, None, None)
+
+            # Find new latest after scrape
+            date = db[ticker_code].find().sort("date", -1).limit(1)
+
+            db["tickers"].update_one(
+                {"ticker:", ticker_code},
+                {"$set": {"last_date_info": date}}
+            )
 
         return "OK"

@@ -37,6 +37,11 @@ def default_route_handler():
     return redirect('/all'), 301
 
 
+@app.route('/tickers/', methods=["GET"])
+def redirect_wrong_access():
+    return redirect('/all'), 301
+
+
 @app.route('/all', methods=["GET"])
 def get_all_tickers_route_handler():  # put application's code here
     tickers_all = db["tickers"].find()
@@ -51,6 +56,9 @@ def get_all_tickers_route_handler():  # put application's code here
 @app.route('/tickers/<ticker_id>')
 def get_data_for_ticker(ticker_id: str):
     ticker_info_doc = db["tickers"].find_one({"ticker": ticker_id})
+
+    if ticker_info_doc is None:
+        return 404
 
     if ticker_info_doc["last_date_info"] < LATEST_AVAILABLE_DATE:
         while True:

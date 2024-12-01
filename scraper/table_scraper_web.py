@@ -181,3 +181,4 @@ class Tablescraper:
             return server_resp
         else:
             return None
+
