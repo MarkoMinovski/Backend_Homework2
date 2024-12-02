@@ -8,6 +8,7 @@ DEMO_LIMIT = 5
 LATEST_AVAILABLE_DATE = lds.get_latest_available_date()
 
 app = Flask(__name__)
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 
 def convert_BSON_to_JSON_doc(BSON_obj):
@@ -33,12 +34,16 @@ def convert_table_row_BSON_to_JSON(BSON_table_row):
 
 @app.route('/', methods=["GET"])
 def default_route_handler():
-    return redirect('/all'), 301
+    redirect_order = redirect('/all')
+    redirect_order.headers.add('Access-Control-Allow-Origin', '*')
+    return redirect_order, 301
 
 
 @app.route('/tickers/', methods=["GET"])
 def redirect_wrong_access():
-    return redirect('/all'), 301
+    redirect_order = redirect('/all')
+    redirect_order.headers.add('Access-Control-Allow-Origin', '*')
+    return redirect_order, 301
 
 
 @app.route('/all', methods=["GET"])
@@ -49,7 +54,9 @@ def get_all_tickers_route_handler():  # put application's code here
     for doc in tickers_all:
         ret_json.append(convert_BSON_to_JSON_doc(doc))
 
-    return jsonify(ret_json), 200
+    ret_json = jsonify(ret_json)
+    ret_json.headers.add('Access-Control-Allow-Origin', '*')
+    return ret_json, 200
 
 
 @app.route('/tickers/<ticker_id>')
@@ -71,7 +78,9 @@ def get_data_for_ticker(ticker_id: str):
     for doc in documents:
         ret_json.append(convert_table_row_BSON_to_JSON(doc))
 
-    return jsonify(ret_json), 200
+    ret_json = jsonify(ret_json)
+    ret_json.headers.add('Access-Control-Allow-Origin', '*')
+    return ret_json, 200
 
 
 if __name__ == '__main__':
