@@ -28,7 +28,8 @@ def convert_table_row_BSON_to_JSON(BSON_table_row):
         "avg": BSON_table_row["avg"],
         "percentage_change_decimal": BSON_table_row["percentage_change_decimal"],
         "vol": BSON_table_row["vol"],
-        "BEST_turnover": BSON_table_row["BEST_turnover"]
+        "BEST_turnover": BSON_table_row["BEST_turnover"],
+        "total_turnover": BSON_table_row["total_turnover"]
     }
 
 
@@ -44,6 +45,14 @@ def redirect_wrong_access():
     redirect_order = redirect('/all')
     redirect_order.headers.add('Access-Control-Allow-Origin', '*')
     return redirect_order, 301
+
+
+@app.route('/tickers/latest', methods=["GET"])
+def return_latest_trade_date():
+    resp = LATEST_AVAILABLE_DATE
+    resp = jsonify(resp)
+    resp.headers.add('Access-Control-Allow-Origin', '*')
+    return resp, 200
 
 
 @app.route('/all', methods=["GET"])
@@ -67,13 +76,10 @@ def get_data_for_ticker(ticker_id: str):
         return 404
 
     if ticker_info_doc["last_date_info"] < LATEST_AVAILABLE_DATE:
-        while True:
-            res = ws.scrape_for_single_ticker(ticker_id)
-            if res == "OK":
-                break
+        ws.scrape_for_single_ticker(ticker_id)
 
     ret_json = []
-    documents = db[ticker_id].find().sort("date", -1).limit(DEMO_LIMIT)
+    documents = db[ticker_id].find().sort("date", -1).limit(DEMO_LIMIT + 5)
 
     for doc in documents:
         ret_json.append(convert_table_row_BSON_to_JSON(doc))
