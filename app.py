@@ -36,14 +36,14 @@ def convert_table_row_BSON_to_JSON(BSON_table_row):
 @app.route('/', methods=["GET"])
 def default_route_handler():
     redirect_order = redirect('/all')
-    redirect_order.headers.add('Access-Control-Allow-Origin', '*')
+    redirect_order.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
     return redirect_order, 301
 
 
 @app.route('/tickers/', methods=["GET"])
 def redirect_wrong_access():
     redirect_order = redirect('/all')
-    redirect_order.headers.add('Access-Control-Allow-Origin', '*')
+    redirect_order.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
     return redirect_order, 301
 
 
@@ -64,7 +64,7 @@ def get_all_tickers_route_handler():  # put application's code here
         ret_json.append(convert_BSON_to_JSON_doc(doc))
 
     ret_json = jsonify(ret_json)
-    ret_json.headers.add('Access-Control-Allow-Origin', '*')
+    ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
     return ret_json, 200
 
 
@@ -85,7 +85,7 @@ def get_data_for_ticker(ticker_id: str):
         ret_json.append(convert_table_row_BSON_to_JSON(doc))
 
     ret_json = jsonify(ret_json)
-    ret_json.headers.add('Access-Control-Allow-Origin', '*')
+    ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
     return ret_json, 200
 
 
