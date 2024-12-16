@@ -54,6 +54,8 @@ class Tablescraper:
 
             if no_table_in_previous_cycle:
                 search_date += timedelta(weeks=8)
+                if search_date >= LATEST_AVAILABLE:
+                    finished_batch = True
 
             successful_response = False
             response = None

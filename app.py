@@ -1,11 +1,23 @@
+import time
 from flask import Flask, jsonify, redirect
 from DBClient import database as db
 from scraper.latest_date_scraper_web import Latestdatescraper as lds
 from scraper.web_scraper_main import web_scraper as ws
+import threading
 
 DEMO_LIMIT = 5
 
 LATEST_AVAILABLE_DATE = lds.get_latest_available_date()
+START_TIME = time.time()
+
+scraper_thread = None
+
+
+def get_hours_uptime(seconds_uptime: float):
+    return int(seconds_uptime) // 3600
+
+
+LAST_HOURS_UPTIME_RESULT = 0
 
 app = Flask(__name__)
 app.config['CORS_HEADERS'] = 'Content-Type'
@@ -33,6 +45,30 @@ def convert_table_row_BSON_to_JSON(BSON_table_row):
     }
 
 
+@app.before_request
+def initiate_first_request_scrape():
+    app.before_request_funcs[None].remove(initiate_first_request_scrape)
+    initiate_scraper_thread()
+
+
+def initiate_scraper_thread():
+    global scraper_thread
+
+    if scraper_thread is None or not scraper_thread.isAlive():
+        scraper_thread = threading.Thread(target=thread_scraping_wrapper_func, daemon=True)
+        print(f"Running background scrape on thread {str(scraper_thread)}")
+        scraper_thread.start()
+
+
+def thread_scraping_wrapper_func():
+    try:
+        ws.main_scraping_loop()
+    finally:
+        global scraper_thread
+        print(f"Successful background scrape on thread {str(scraper_thread)}. Shutting down")
+        scraper_thread = None
+
+
 @app.route('/', methods=["GET"])
 def default_route_handler():
     redirect_order = redirect('/all')
@@ -58,6 +94,20 @@ def return_latest_trade_date():
 @app.route('/all', methods=["GET"])
 def get_all_tickers_route_handler():  # put application's code here
     tickers_all = db["tickers"].find()
+    current_time = time.time()
+    current_uptime_res = get_hours_uptime(current_time)
+    hour_has_passed = False
+
+    global scraper_thread
+    global LAST_HOURS_UPTIME_RESULT
+
+    if current_uptime_res != LAST_HOURS_UPTIME_RESULT:
+        hour_has_passed = True
+        LAST_HOURS_UPTIME_RESULT = current_uptime_res
+
+    if scraper_thread is None and hour_has_passed:
+        initiate_scraper_thread()
+
     ret_json = []
 
     for doc in tickers_all:
@@ -65,6 +115,10 @@ def get_all_tickers_route_handler():  # put application's code here
 
     ret_json = jsonify(ret_json)
     ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+
+    if scraper_thread.isAlive():
+        ret_json.headers.add("New info available", "True")
+
     return ret_json, 200
 
 
