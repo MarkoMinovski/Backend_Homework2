@@ -148,7 +148,7 @@ class Tablescraper:
 
         print("Writing complete")
 
-        # Only used if writing to local file
+        # Returns the latest scraped date in the loop
         return date_return_value
 
     @staticmethod

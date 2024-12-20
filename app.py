@@ -54,7 +54,7 @@ def initiate_first_request_scrape():
 def initiate_scraper_thread():
     global scraper_thread
 
-    if scraper_thread is None or not scraper_thread.isAlive():
+    if scraper_thread is None or not scraper_thread.is_alive():
         scraper_thread = threading.Thread(target=thread_scraping_wrapper_func, daemon=True)
         print(f"Running background scrape on thread {str(scraper_thread)}")
         scraper_thread.start()
@@ -116,8 +116,9 @@ def get_all_tickers_route_handler():  # put application's code here
     ret_json = jsonify(ret_json)
     ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
 
-    if scraper_thread.isAlive():
-        ret_json.headers.add("New info available", "True")
+    if scraper_thread is not None:
+        if scraper_thread.is_alive():
+            ret_json.headers.add("New info available", "True")
 
     return ret_json, 200
 

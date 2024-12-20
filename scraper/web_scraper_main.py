@@ -107,6 +107,8 @@ class web_scraper:
             writer = None
 
         last_pos = -1
+        iterations_on_current_position = 0
+
         while any(status is False for status in is_up_to_date):
             current_pos = is_up_to_date.index(False)
             next_outdated_ticker_pos = current_pos
@@ -147,8 +149,14 @@ class web_scraper:
 
             if date_latest_for_current_ticker.date() == latest_available_date.date():
                 is_up_to_date[current_pos] = True
-            elif last_pos == current_pos:
+
+            elif iterations_on_current_position > 66 and ret != latest_available_date.date():
                 is_up_to_date[current_pos] = True
+
+            if last_pos == current_pos:
+                iterations_on_current_position += 1
+            else:
+                iterations_on_current_position = 0
             last_pos = current_pos
 
         if local_write:
