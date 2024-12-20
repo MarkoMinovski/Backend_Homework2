@@ -150,7 +150,10 @@ class web_scraper:
             if date_latest_for_current_ticker.date() == latest_available_date.date():
                 is_up_to_date[current_pos] = True
 
-            elif iterations_on_current_position > 66 and ret != latest_available_date.date():
+            # Realistically this "and ret != latest_available_date.date()" is unnecessary but
+            # just in case... The idea with this magic 11 is that on a successful scrape we scrape an entire year,
+            # so it should never take more than 11 iterations
+            elif iterations_on_current_position > 11 and ret != latest_available_date.date():
                 is_up_to_date[current_pos] = True
 
             if last_pos == current_pos:
