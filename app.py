@@ -117,14 +117,14 @@ def get_all_tickers_route_handler():  # put application's code here
     ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
 
     if scraper_thread is not None:
-        if scraper_thread.is_alive():
-            ret_json.headers.add("New info available", "True")
+        ret_json.headers.add("New info available", "True")
 
     return ret_json, 200
 
 
 @app.route('/tickers/<ticker_id>')
 def get_data_for_ticker(ticker_id: str):
+    # DO NOT USE
     ticker_info_doc = db["tickers"].find_one({"ticker": ticker_id})
 
     if ticker_info_doc is None:
@@ -141,6 +141,26 @@ def get_data_for_ticker(ticker_id: str):
 
     ret_json = jsonify(ret_json)
     ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+    return ret_json, 200
+
+
+@app.route('/tickers/range/<ticker_id>')
+def get_date_range_for_ticker(ticker_id: str):
+    ticker_info_doc = db["tickers"].find_one({"ticker": ticker_id})
+    ticker_name = ticker_info_doc["ticker"]
+    ticker_earliest_doc = db[ticker_name].find().sort("date", 1).limit(1)
+    ticker_earliest_date = ticker_earliest_doc[0]["date"]
+    ticker_latest_date = ticker_info_doc["last_date_info"]
+
+    ret_json = {
+        "code": ticker_name,
+        "date_earliest": ticker_earliest_date,
+        "date_latest": ticker_latest_date
+    }
+
+    ret_json = jsonify(ret_json)
+    ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+
     return ret_json, 200
 
 
