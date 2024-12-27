@@ -6,8 +6,9 @@ from scraper.latest_date_scraper_web import Latestdatescraper as lds
 from scraper.web_scraper_main import web_scraper as ws
 from scraper.table_scraper_web import get_day_month_year
 import pandas as pd
+import ta
 
-from pandas_analysis_module.moving_averages import create_dataframe
+from pandas_analysis_module.dataframe_functions import create_dataframe
 
 import threading
 
@@ -172,9 +173,12 @@ def get_date_range_for_ticker(ticker_id: str):
 
 @app.route('/tickers/analyze', methods=['POST'])
 def test_df():
+
     ticker_code = request.form.get("code")
     date_start_list = get_day_month_year(request.form.get("interval_start"))
     date_end_list = get_day_month_year(request.form.get("interval_end"))
+    analysis_type = request.form.get("analysis_type")
+
     date_start_in_datetime = datetime.datetime(int(date_start_list[2]), int(date_start_list[1]),
                                                int(date_start_list[0]))
     date_end_in_datetime = datetime.datetime(int(date_end_list[2]), int(date_end_list[1]), int(date_end_list[0]))
@@ -184,9 +188,42 @@ def test_df():
 
     days_in_interval = date_end_in_datetime - date_start_in_datetime
 
-    sma_BEST_turnover = df['BEST_turnover'].rolling(window=days_in_interval.days).mean()
+    print(days_in_interval)
 
-    return jsonify(sma_BEST_turnover), 200
+    res = []
+
+    if analysis_type == "rolling_average":
+        sma_ltp = df['last_trade_price'].rolling(window=int(days_in_interval.days), min_periods=1).mean()
+        sma_ltp.fillna('0')
+        sma_ltp.name = "last_trade_price_SMA"
+
+        res.append(sma_ltp)
+
+        ema_ltp = df['last_trade_price'].ewm(span=days_in_interval.days, min_periods=1).mean()
+        ema_ltp.fillna('0')
+        ema_ltp.name = "last_trade_price_EMA"
+
+        res.append(ema_ltp)
+
+        cma_ltp = df['last_trade_price'].expanding().mean()
+        cma_ltp.fillna('0')
+        cma_ltp.name = "last_trade_price_CMA"
+
+        res.append(cma_ltp)
+
+        ret = pd.concat(res, axis=1)
+
+        ret = ret.to_json(orient='records')
+    elif analysis_type == "oscillators":
+        df_with_momentum_oscillators = (ta.add_momentum_ta
+                                        (df=df, high='max', low='min', close='last_trade_price',
+                                         volume='vol', fillna=True))
+
+        print(df_with_momentum_oscillators)
+
+        ret = df_with_momentum_oscillators.to_json(orient='records', force_ascii=False)
+
+    return jsonify(ret)
 
 
 if __name__ == '__main__':
