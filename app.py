@@ -1,8 +1,14 @@
 import time
-from flask import Flask, jsonify, redirect
+import datetime
+from flask import Flask, jsonify, redirect, request
 from DBClient import database as db
 from scraper.latest_date_scraper_web import Latestdatescraper as lds
 from scraper.web_scraper_main import web_scraper as ws
+from scraper.table_scraper_web import get_day_month_year
+import pandas as pd
+
+from pandas_analysis_module.moving_averages import create_dataframe
+
 import threading
 
 DEMO_LIMIT = 5
@@ -162,6 +168,25 @@ def get_date_range_for_ticker(ticker_id: str):
     ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
 
     return ret_json, 200
+
+
+@app.route('/tickers/analyze', methods=['POST'])
+def test_df():
+    ticker_code = request.form.get("code")
+    date_start_list = get_day_month_year(request.form.get("interval_start"))
+    date_end_list = get_day_month_year(request.form.get("interval_end"))
+    date_start_in_datetime = datetime.datetime(int(date_start_list[2]), int(date_start_list[1]),
+                                               int(date_start_list[0]))
+    date_end_in_datetime = datetime.datetime(int(date_end_list[2]), int(date_end_list[1]), int(date_end_list[0]))
+
+    df = create_dataframe(ticker_code=ticker_code, range_earliest=date_start_in_datetime,
+                          range_latest=date_end_in_datetime)
+
+    days_in_interval = date_end_in_datetime - date_start_in_datetime
+
+    sma_BEST_turnover = df['BEST_turnover'].rolling(window=days_in_interval.days).mean()
+
+    return jsonify(sma_BEST_turnover), 200
 
 
 if __name__ == '__main__':
