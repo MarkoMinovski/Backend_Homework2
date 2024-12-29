@@ -20,6 +20,10 @@ START_TIME = time.time()
 scraper_thread = None
 
 
+def split_periods_string(string: str):
+    return string.split('.')
+
+
 def get_hours_uptime(seconds_uptime: float):
     return int(seconds_uptime) // 3600
 
@@ -79,14 +83,22 @@ def thread_scraping_wrapper_func():
 @app.route('/', methods=["GET"])
 def default_route_handler():
     redirect_order = redirect('/all')
-    redirect_order.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+    redirect_order.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
     return redirect_order, 301
+
+
+@app.route('/tickers/latest/str', methods=["GET"])
+def return_latest_trade_date_as_str():
+    resp = lds.get_latest_available_date_as_string()
+    resp = jsonify(resp)
+    resp.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
+    return resp, 200
 
 
 @app.route('/tickers/', methods=["GET"])
 def redirect_wrong_access():
     redirect_order = redirect('/all')
-    redirect_order.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+    redirect_order.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
     return redirect_order, 301
 
 
@@ -94,7 +106,7 @@ def redirect_wrong_access():
 def return_latest_trade_date():
     resp = LATEST_AVAILABLE_DATE
     resp = jsonify(resp)
-    resp.headers.add('Access-Control-Allow-Origin', '*')
+    resp.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
     return resp, 200
 
 
@@ -121,7 +133,7 @@ def get_all_tickers_route_handler():  # put application's code here
         ret_json.append(convert_BSON_to_JSON_doc(doc))
 
     ret_json = jsonify(ret_json)
-    ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+    ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
 
     if scraper_thread is not None:
         ret_json.headers.add("New info available", "True")
@@ -147,7 +159,7 @@ def get_data_for_ticker(ticker_id: str):
         ret_json.append(convert_table_row_BSON_to_JSON(doc))
 
     ret_json = jsonify(ret_json)
-    ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+    ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
     return ret_json, 200
 
 
@@ -166,14 +178,14 @@ def get_date_range_for_ticker(ticker_id: str):
     }
 
     ret_json = jsonify(ret_json)
-    ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+    ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
 
     return ret_json, 200
 
 
 @app.route('/tickers/analyze', methods=['POST'])
-def test_df():
-
+def accept_analysis_post():
+    # DO NOT USE
     ticker_code = request.form.get("code")
     date_start_list = get_day_month_year(request.form.get("interval_start"))
     date_end_list = get_day_month_year(request.form.get("interval_end"))
@@ -224,6 +236,85 @@ def test_df():
         ret = df_with_momentum_oscillators.to_json(orient='records', force_ascii=False)
 
     return jsonify(ret)
+
+
+@app.route('/tickers/analyze/averages/<interval_start>/<interval_end>/<ticker_code_param>', methods=['GET'])
+def analyze_moving_averages(interval_start: str, interval_end: str, ticker_code_param: str):
+    ticker_code = ticker_code_param
+    date_start_list = split_periods_string(interval_start)
+    date_end_list = split_periods_string(interval_end)
+
+    date_start_in_datetime = datetime.datetime(int(date_start_list[2]), int(date_start_list[0]),
+                                               int(date_start_list[1]))
+    date_end_in_datetime = datetime.datetime(int(date_end_list[2]), int(date_end_list[0]), int(date_end_list[1]))
+
+    df = create_dataframe(ticker_code=ticker_code, range_earliest=date_start_in_datetime,
+                          range_latest=date_end_in_datetime)
+
+    days_in_interval = date_end_in_datetime - date_start_in_datetime
+
+    print(days_in_interval)
+
+    res = []
+
+    date_column = df['date']
+    date_column.name = "date"
+
+    res.append(date_column)
+
+    sma_ltp = df['last_trade_price'].rolling(window=days_in_interval.days, min_periods=1).mean()
+    sma_ltp.fillna(0)
+    sma_ltp.name = "last_trade_price_SMA"
+
+    res.append(sma_ltp)
+
+    ema_ltp = df['last_trade_price'].ewm(span=days_in_interval.days, min_periods=1).mean()
+    ema_ltp.fillna(0)
+    ema_ltp.name = "last_trade_price_EMA"
+
+    res.append(ema_ltp)
+
+    cma_ltp = df['last_trade_price'].expanding().mean()
+    cma_ltp.fillna(0)
+    cma_ltp.name = "last_trade_price_CMA"
+
+    res.append(cma_ltp)
+
+    ret = pd.concat(res, axis=1)
+
+    ret = ret.to_dict(orient='records')
+
+    response = jsonify(ret)
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
+
+    return response
+
+
+@app.route('/tickers/analyze/oscillators/<interval_start>/<interval_end>/<ticker_code_param>', methods=['GET'])
+def oscillator_analysis(interval_start: str, interval_end: str, ticker_code_param: str):
+    ticker_code = ticker_code_param
+    date_start_list = split_periods_string(interval_start)
+    date_end_list = split_periods_string(interval_end)
+
+    date_start_in_datetime = datetime.datetime(int(date_start_list[2]), int(date_start_list[0]),
+                                               int(date_start_list[1]))
+    date_end_in_datetime = datetime.datetime(int(date_end_list[2]), int(date_end_list[0]), int(date_end_list[1]))
+
+    df = create_dataframe(ticker_code=ticker_code, range_earliest=date_start_in_datetime,
+                          range_latest=date_end_in_datetime)
+
+
+    df_with_momentum_oscillators = (ta.add_momentum_ta
+                                    (df=df, high='max', low='min', close='last_trade_price',
+                                     volume='vol', fillna=True))
+
+    df_as_dict = df_with_momentum_oscillators.to_dict(orient='records')
+
+    response = jsonify(df_as_dict)
+
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
+
+    return response
 
 
 if __name__ == '__main__':

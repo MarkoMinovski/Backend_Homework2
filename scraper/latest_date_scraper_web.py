@@ -24,3 +24,18 @@ class Latestdatescraper:
 
         print(f"Latest available date is {latest_m_d_y_datetime}")
         return latest_m_d_y_datetime
+
+    @staticmethod
+    def get_latest_available_date_as_string():
+        resp = requests.get(MAIN_PAGE_URL)
+        ret_string = ''
+
+        print("Finding latest available date...")
+
+        if resp.status_code == HTTP_STATUS_OK:
+            soup = BeautifulSoup(resp.content, "html.parser")
+            target_div = soup.find("div", id="topSymbolValueTopSymbols")
+            child_div_containing_latest_info = target_div.find_all("div", recursive=False)[0]
+            ret_string = child_div_containing_latest_info.text
+
+        return ret_string
