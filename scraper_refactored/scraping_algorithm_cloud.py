@@ -30,6 +30,9 @@ class scraping_algorithm_cloud(base):
 
                 ticker_info_collection.insert_one(new_doc)
                 ticker_name_last_date_pairs.append((ticker, self.range_start))
+            else:
+                tmp_tuple = (query_result["ticker"], query_result["last_date_info"])
+                ticker_name_last_date_pairs.append(tmp_tuple)
         return ticker_name_last_date_pairs
 
     def execute_main_loop(self):
