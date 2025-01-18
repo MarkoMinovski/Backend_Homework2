@@ -91,3 +91,7 @@ def build_ancillary_status_list(ticker_pairs, latest_available_date):
             is_up_to_date.append(True)
 
     return is_up_to_date
+
+
+def get_ten_years_ago():
+    return datetime.today() - timedelta(days=(365 * 10) - 1)

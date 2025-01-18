@@ -6,7 +6,7 @@ from scraper.tablerow import TableRow
 from datetime import datetime, timedelta
 from scraper.latest_date_scraper_web import Latestdatescraper
 
-DEFAULT_URL = "https://www.mse.mk/en/stats/symbolhistory/MPT"
+DEFAULT_URL = "https://www.mse.mk/en/stats/symbolhistory/ALK"
 TODAY = datetime.today()
 LATEST_AVAILABLE = Latestdatescraper.get_latest_available_date()
 

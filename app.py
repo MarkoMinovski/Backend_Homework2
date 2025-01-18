@@ -2,9 +2,15 @@ import time
 import datetime
 from flask import Flask, jsonify, redirect, request
 from DBClient import database as db
+# old
 from scraper.latest_date_scraper_web import Latestdatescraper as lds
 from scraper.web_scraper_main import web_scraper as ws
 from scraper.table_scraper_web import get_day_month_year
+
+# new
+from scraper_refactored.scraping_algorithm_cloud import scraping_algorithm_cloud as scraping_algorithm_cloud_template
+from scraper_refactored.auxiliary_functions.helper_functions import get_ten_years_ago
+
 import pandas as pd
 import ta
 
@@ -14,10 +20,14 @@ import threading
 
 DEMO_LIMIT = 5
 
+STARTER_URL = "https://www.mse.mk/en/stats/symbolhistory/ALK"
+
 LATEST_AVAILABLE_DATE = lds.get_latest_available_date()
 START_TIME = time.time()
 FRONTEND_URL = '*'
 
+scraper_obj = scraping_algorithm_cloud_template(get_ten_years_ago(),
+                                                STARTER_URL)
 scraper_thread = None
 
 
@@ -74,7 +84,7 @@ def initiate_scraper_thread():
 
 def thread_scraping_wrapper_func():
     try:
-        ws.main_scraping_loop()
+        scraper_obj.execute_main_loop()
     finally:
         global scraper_thread
         print(f"Successful background scrape on thread {str(scraper_thread)}. Shutting down")
@@ -160,7 +170,6 @@ def get_data_for_ticker(ticker_id: str):
         ret_json.append(convert_table_row_BSON_to_JSON(doc))
 
     ret_json = jsonify(ret_json)
-    ret_json.headers.add('Access-Control-Allow-Origin', FRONTEND_URL)
     return ret_json, 200
 
 
