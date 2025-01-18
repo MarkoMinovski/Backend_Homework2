@@ -16,6 +16,7 @@ DEMO_LIMIT = 5
 
 LATEST_AVAILABLE_DATE = lds.get_latest_available_date()
 START_TIME = time.time()
+FRONTEND_URL = '*'
 
 scraper_thread = None
 
@@ -83,7 +84,7 @@ def thread_scraping_wrapper_func():
 @app.route('/', methods=["GET"])
 def default_route_handler():
     redirect_order = redirect('/all')
-    redirect_order.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
+    redirect_order.headers.add('Access-Control-Allow-Origin', FRONTEND_URL)
     return redirect_order, 301
 
 
@@ -91,14 +92,14 @@ def default_route_handler():
 def return_latest_trade_date_as_str():
     resp = lds.get_latest_available_date_as_string()
     resp = jsonify(resp)
-    resp.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
+    resp.headers.add('Access-Control-Allow-Origin', FRONTEND_URL)
     return resp, 200
 
 
 @app.route('/tickers/', methods=["GET"])
 def redirect_wrong_access():
     redirect_order = redirect('/all')
-    redirect_order.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
+    redirect_order.headers.add('Access-Control-Allow-Origin', FRONTEND_URL)
     return redirect_order, 301
 
 
@@ -106,7 +107,7 @@ def redirect_wrong_access():
 def return_latest_trade_date():
     resp = LATEST_AVAILABLE_DATE
     resp = jsonify(resp)
-    resp.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
+    resp.headers.add('Access-Control-Allow-Origin', FRONTEND_URL)
     return resp, 200
 
 
@@ -133,7 +134,7 @@ def get_all_tickers_route_handler():  # put application's code here
         ret_json.append(convert_BSON_to_JSON_doc(doc))
 
     ret_json = jsonify(ret_json)
-    ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
+    ret_json.headers.add('Access-Control-Allow-Origin', FRONTEND_URL)
 
     if scraper_thread is not None:
         ret_json.headers.add("New info available", "True")
@@ -159,7 +160,7 @@ def get_data_for_ticker(ticker_id: str):
         ret_json.append(convert_table_row_BSON_to_JSON(doc))
 
     ret_json = jsonify(ret_json)
-    ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
+    ret_json.headers.add('Access-Control-Allow-Origin', FRONTEND_URL)
     return ret_json, 200
 
 
@@ -178,7 +179,7 @@ def get_date_range_for_ticker(ticker_id: str):
     }
 
     ret_json = jsonify(ret_json)
-    ret_json.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
+    ret_json.headers.add('Access-Control-Allow-Origin', FRONTEND_URL)
 
     return ret_json, 200
 
@@ -285,7 +286,7 @@ def analyze_moving_averages(interval_start: str, interval_end: str, ticker_code_
     ret = ret.to_dict(orient='records')
 
     response = jsonify(ret)
-    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
+    response.headers.add('Access-Control-Allow-Origin', FRONTEND_URL)
 
     return response
 
@@ -312,7 +313,7 @@ def oscillator_analysis(interval_start: str, interval_end: str, ticker_code_para
 
     response = jsonify(df_as_dict)
 
-    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
+    response.headers.add('Access-Control-Allow-Origin', FRONTEND_URL)
 
     return response
 
