@@ -249,4 +249,4 @@ def oscillator_analysis(interval_start: str, interval_end: str, ticker_code_para
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0', port=5000)
