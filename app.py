@@ -2,14 +2,11 @@ import time
 import datetime
 from flask import Flask, jsonify, redirect, request
 from DBClient import database as db
-# old
-from scraper.latest_date_scraper_web import Latestdatescraper as lds
-from scraper.web_scraper_main import web_scraper as ws
-from scraper.table_scraper_web import get_day_month_year
 
 # new
 from scraper_refactored.scraping_algorithm_cloud import scraping_algorithm_cloud as scraping_algorithm_cloud_template
-from scraper_refactored.auxiliary_functions.helper_functions import get_ten_years_ago
+from scraper_refactored.auxiliary_functions.helper_functions import (get_ten_years_ago,
+                                                                     get_latest_available_date_as_string)
 
 import pandas as pd
 import ta
@@ -21,8 +18,9 @@ import threading
 DEMO_LIMIT = 5
 
 STARTER_URL = "https://www.mse.mk/en/stats/symbolhistory/ALK"
+MAIN_PAGE_URL = "https://www.mse.mk/en"
 
-LATEST_AVAILABLE_DATE = lds.get_latest_available_date()
+# LATEST_AVAILABLE_DATE = lds.get_latest_available_date()
 START_TIME = time.time()
 FRONTEND_URL = '*'
 
@@ -100,7 +98,7 @@ def default_route_handler():
 
 @app.route('/tickers/latest/str', methods=["GET"])
 def return_latest_trade_date_as_str():
-    resp = lds.get_latest_available_date_as_string()
+    resp = get_latest_available_date_as_string(MAIN_PAGE_URL)
     resp = jsonify(resp)
     resp.headers.add('Access-Control-Allow-Origin', FRONTEND_URL)
     return resp, 200
@@ -115,7 +113,7 @@ def redirect_wrong_access():
 
 @app.route('/tickers/latest', methods=["GET"])
 def return_latest_trade_date():
-    resp = LATEST_AVAILABLE_DATE
+    resp = None
     resp = jsonify(resp)
     resp.headers.add('Access-Control-Allow-Origin', FRONTEND_URL)
     return resp, 200
@@ -152,27 +150,6 @@ def get_all_tickers_route_handler():  # put application's code here
     return ret_json, 200
 
 
-@app.route('/tickers/<ticker_id>')
-def get_data_for_ticker(ticker_id: str):
-    # DO NOT USE
-    ticker_info_doc = db["tickers"].find_one({"ticker": ticker_id})
-
-    if ticker_info_doc is None:
-        return 404
-
-    if ticker_info_doc["last_date_info"] < LATEST_AVAILABLE_DATE:
-        ws.scrape_for_single_ticker(ticker_id)
-
-    ret_json = []
-    documents = db[ticker_id].find().sort("date", -1).limit(DEMO_LIMIT + 5)
-
-    for doc in documents:
-        ret_json.append(convert_table_row_BSON_to_JSON(doc))
-
-    ret_json = jsonify(ret_json)
-    return ret_json, 200
-
-
 @app.route('/tickers/range/<ticker_id>')
 def get_date_range_for_ticker(ticker_id: str):
     ticker_info_doc = db["tickers"].find_one({"ticker": ticker_id})
@@ -191,61 +168,6 @@ def get_date_range_for_ticker(ticker_id: str):
     ret_json.headers.add('Access-Control-Allow-Origin', FRONTEND_URL)
 
     return ret_json, 200
-
-
-@app.route('/tickers/analyze', methods=['POST'])
-def accept_analysis_post():
-    # DO NOT USE
-    ticker_code = request.form.get("code")
-    date_start_list = get_day_month_year(request.form.get("interval_start"))
-    date_end_list = get_day_month_year(request.form.get("interval_end"))
-    analysis_type = request.form.get("analysis_type")
-
-    date_start_in_datetime = datetime.datetime(int(date_start_list[2]), int(date_start_list[1]),
-                                               int(date_start_list[0]))
-    date_end_in_datetime = datetime.datetime(int(date_end_list[2]), int(date_end_list[1]), int(date_end_list[0]))
-
-    df = create_dataframe(ticker_code=ticker_code, range_earliest=date_start_in_datetime,
-                          range_latest=date_end_in_datetime)
-
-    days_in_interval = date_end_in_datetime - date_start_in_datetime
-
-    print(days_in_interval)
-
-    res = []
-
-    if analysis_type == "rolling_average":
-        sma_ltp = df['last_trade_price'].rolling(window=int(days_in_interval.days), min_periods=1).mean()
-        sma_ltp.fillna('0')
-        sma_ltp.name = "last_trade_price_SMA"
-
-        res.append(sma_ltp)
-
-        ema_ltp = df['last_trade_price'].ewm(span=days_in_interval.days, min_periods=1).mean()
-        ema_ltp.fillna('0')
-        ema_ltp.name = "last_trade_price_EMA"
-
-        res.append(ema_ltp)
-
-        cma_ltp = df['last_trade_price'].expanding().mean()
-        cma_ltp.fillna('0')
-        cma_ltp.name = "last_trade_price_CMA"
-
-        res.append(cma_ltp)
-
-        ret = pd.concat(res, axis=1)
-
-        ret = ret.to_json(orient='records')
-    elif analysis_type == "oscillators":
-        df_with_momentum_oscillators = (ta.add_momentum_ta
-                                        (df=df, high='max', low='min', close='last_trade_price',
-                                         volume='vol', fillna=True))
-
-        print(df_with_momentum_oscillators)
-
-        ret = df_with_momentum_oscillators.to_json(orient='records', force_ascii=False)
-
-    return jsonify(ret)
 
 
 @app.route('/tickers/analyze/averages/<interval_start>/<interval_end>/<ticker_code_param>', methods=['GET'])
@@ -312,7 +234,6 @@ def oscillator_analysis(interval_start: str, interval_end: str, ticker_code_para
 
     df = create_dataframe(ticker_code=ticker_code, range_earliest=date_start_in_datetime,
                           range_latest=date_end_in_datetime)
-
 
     df_with_momentum_oscillators = (ta.add_momentum_ta
                                     (df=df, high='max', low='min', close='last_trade_price',

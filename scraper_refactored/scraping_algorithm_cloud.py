@@ -2,7 +2,7 @@ from datetime import timedelta, datetime
 
 from pymongo.errors import BulkWriteError
 
-from scraper.tablerow import TableRow
+from scraper_old.tablerow import TableRow
 from scraper_refactored.scraping_algorithm_base_class import scraping_algorithm_base as base
 from scraper_refactored.auxiliary_functions.helper_functions import get_latest_available_date, get_day_month_year, \
     reformat_delimiters, build_ancillary_status_list
